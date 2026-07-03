@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="座標移動くん" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#111827" />
+  <title>座標移動くん</title>
+  <style>
+    :root{
+      --bg:#0b1220;
+      --panel:#111827;
+      --panel2:#172033;
+      --text:#e5e7eb;
+      --muted:#9ca3af;
+      --line:#263246;
+      --accent:#60a5fa;
+      --accent2:#22c55e;
+      --warn:#f59e0b;
+      --danger:#ef4444;
+      --input:#0f172a;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue","Yu Gothic",YuGothic,Meiryo,sans-serif}
+    body{padding:14px 14px 28px; padding-bottom:calc(28px + env(safe-area-inset-bottom));}
+    .app{max-width:720px;margin:0 auto}
+    header{padding:8px 2px 14px}
+    h1{font-size:24px;margin:0 0 5px;letter-spacing:.02em}
+    .sub{color:var(--muted);font-size:13px;line-height:1.45}
+    .card{background:linear-gradient(180deg,var(--panel),#0f172a);border:1px solid var(--line);border-radius:18px;padding:14px;margin:12px 0;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    .card h2{font-size:16px;margin:0 0 12px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    label{display:block;font-size:12px;color:var(--muted);margin:0 0 5px}
+    input,select{width:100%;font-size:18px;color:var(--text);background:var(--input);border:1px solid #344055;border-radius:12px;padding:12px 11px;outline:none}
+    input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(96,165,250,.18)}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .mode{display:grid;grid-template-columns:1fr;gap:9px}
+    .mode button,.btn{font-size:15px;border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:13px;padding:12px 10px;min-height:44px}
+    .mode button.active{border-color:var(--accent);background:rgba(96,165,250,.18)}
+    .quick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+    .quick button{font-size:14px;border:1px solid var(--line);background:#0f172a;color:var(--text);border-radius:12px;padding:10px 6px}
+    .quick button:active,.btn:active,.mode button:active{transform:translateY(1px)}
+    .result{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .out{background:#07101f;border:1px solid var(--line);border-radius:14px;padding:12px}
+    .out .name{color:var(--muted);font-size:12px;margin-bottom:4px}
+    .out .val{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:18px;line-height:1.35;word-break:break-all}
+    .actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+    .primary{background:linear-gradient(180deg,#2563eb,#1d4ed8);border-color:#3b82f6}
+    .green{background:linear-gradient(180deg,#16a34a,#15803d);border-color:#22c55e}
+    .note{font-size:12px;color:var(--muted);line-height:1.55;margin-top:10px}
+    canvas{width:100%;height:230px;background:#07101f;border:1px solid var(--line);border-radius:14px}
+    .pill{display:inline-block;color:#bfdbfe;background:rgba(96,165,250,.13);border:1px solid rgba(96,165,250,.35);padding:4px 8px;border-radius:999px;font-size:12px;margin-top:6px}
+    .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#e5e7eb;color:#111827;padding:10px 14px;border-radius:999px;font-weight:700;font-size:14px;opacity:0;pointer-events:none;transition:.22s}
+    .toast.show{opacity:1;bottom:34px}
+    details{margin-top:10px}
+    summary{color:#bfdbfe;font-size:13px}
+    .small{font-size:12px;color:var(--muted);line-height:1.55}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>座標移動くん</h1>
+    <div class="sub">2点座標を、上下左右・任意角度・A→Bに対して右/左へ平行移動。だいちゃん現場用の小さい座標工房。</div>
+    <span class="pill">mm想定 / 小数3桁表示</span>
+  </header>
+
+  <section class="card">
+    <h2>① 元の2点</h2>
+    <div class="grid">
+      <div><label>A点 X</label><input id="ax" inputmode="decimal" value="3207"></div>
+      <div><label>A点 Y</label><input id="ay" inputmode="decimal" value="2268"></div>
+      <div><label>B点 X</label><input id="bx" inputmode="decimal" value="4500"></div>
+      <div><label>B点 Y</label><input id="by" inputmode="decimal" value="3100"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>② 移動方法</h2>
+    <div class="mode">
+      <button id="modeAxis" class="active" onclick="setMode('axis')">上下左右に移動</button>
+      <button id="modeAngle" onclick="setMode('angle')">任意角度に移動</button>
+      <button id="modeNormal" onclick="setMode('normal')">A→Bの線に対して右/左へ移動</button>
+    </div>
+
+    <div id="axisBox">
+      <div class="grid" style="margin-top:12px">
+        <div><label>方向</label>
+          <select id="axisDir">
+            <option value="up">上</option>
+            <option value="down">下</option>
+            <option value="right">右</option>
+            <option value="left">左</option>
+          </select>
+        </div>
+        <div><label>距離</label><input id="axisDist" inputmode="decimal" value="500"></div>
+      </div>
+      <div class="quick">
+        <button onclick="quickAxis('up')">上</button>
+        <button onclick="quickAxis('down')">下</button>
+        <button onclick="quickAxis('right')">右</button>
+        <button onclick="quickAxis('left')">左</button>
+      </div>
+    </div>
+
+    <div id="angleBox" style="display:none">
+      <div class="grid" style="margin-top:12px">
+        <div><label>角度 θ（度）</label><input id="angleDeg" inputmode="decimal" value="30"></div>
+        <div><label>距離</label><input id="angleDist" inputmode="decimal" value="500"></div>
+      </div>
+      <div class="note">0°=Xプラス方向、90°=Yプラス方向。数学座標の角度です。</div>
+    </div>
+
+    <div id="normalBox" style="display:none">
+      <div class="grid" style="margin-top:12px">
+        <div><label>線に対して</label>
+          <select id="normalSide">
+            <option value="right">右へ</option>
+            <option value="left">左へ</option>
+          </select>
+        </div>
+        <div><label>距離</label><input id="normalDist" inputmode="decimal" value="500"></div>
+      </div>
+      <div class="note">A→B方向に立って見た時の右/左。斜め壁の逃げ墨に使うやつ。</div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>③ 結果</h2>
+    <div class="result">
+      <div class="out"><div class="name">A'</div><div class="val" id="aout">-</div></div>
+      <div class="out"><div class="name">B'</div><div class="val" id="bout">-</div></div>
+    </div>
+    <div class="actions">
+      <button class="btn primary" onclick="copyResult()">結果コピー</button>
+      <button class="btn green" onclick="swapAB()">A/B入替</button>
+    </div>
+    <div class="note" id="vecout"></div>
+  </section>
+
+  <section class="card">
+    <h2>簡易図</h2>
+    <canvas id="plot" width="720" height="460"></canvas>
+    <details>
+      <summary>ホーム画面に追加する方法</summary>
+      <p class="small">Safariでこのページを開く → 共有ボタン → ホーム画面に追加。ChatGPT内プレビューだと出ないことがあるので、ファイルをSafariで開くのがコツ。</p>
+    </details>
+  </section>
+</div>
+<div class="toast" id="toast">コピーしたよ</div>
+
+<script>
+let mode = 'axis';
+
+function num(id){
+  const v = parseFloat(String(document.getElementById(id).value).replace(',', '.'));
+  return Number.isFinite(v) ? v : 0;
+}
+function fmt(n){
+  if(!Number.isFinite(n)) return '-';
+  const s = (Math.round(n*1000)/1000).toFixed(3);
+  return s.replace(/\.?0+$/,'');
+}
+function setMode(m){
+  mode = m;
+  document.getElementById('modeAxis').classList.toggle('active', m==='axis');
+  document.getElementById('modeAngle').classList.toggle('active', m==='angle');
+  document.getElementById('modeNormal').classList.toggle('active', m==='normal');
+  document.getElementById('axisBox').style.display = m==='axis' ? '' : 'none';
+  document.getElementById('angleBox').style.display = m==='angle' ? '' : 'none';
+  document.getElementById('normalBox').style.display = m==='normal' ? '' : 'none';
+  calc();
+}
+function quickAxis(d){
+  document.getElementById('axisDir').value = d;
+  setMode('axis');
+}
+function getDelta(){
+  if(mode === 'axis'){
+    const d = num('axisDist');
+    const dir = document.getElementById('axisDir').value;
+    if(dir==='up') return [0,d];
+    if(dir==='down') return [0,-d];
+    if(dir==='right') return [d,0];
+    return [-d,0];
+  }
+  if(mode === 'angle'){
+    const rad = num('angleDeg') * Math.PI / 180;
+    const d = num('angleDist');
+    return [d*Math.cos(rad), d*Math.sin(rad)];
+  }
+  const ax=num('ax'), ay=num('ay'), bx=num('bx'), by=num('by');
+  const vx=bx-ax, vy=by-ay;
+  const len=Math.hypot(vx,vy);
+  if(len===0) return [0,0];
+  const d=num('normalDist');
+  const side=document.getElementById('normalSide').value;
+  // A→Bに向かって右: (vy, -vx), 左: (-vy, vx)
+  if(side==='right') return [vy/len*d, -vx/len*d];
+  return [-vy/len*d, vx/len*d];
+}
+function calc(){
+  const ax=num('ax'), ay=num('ay'), bx=num('bx'), by=num('by');
+  const [dx,dy]=getDelta();
+  const ax2=ax+dx, ay2=ay+dy, bx2=bx+dx, by2=by+dy;
+  document.getElementById('aout').textContent = `X ${fmt(ax2)} / Y ${fmt(ay2)}`;
+  document.getElementById('bout').textContent = `X ${fmt(bx2)} / Y ${fmt(by2)}`;
+  document.getElementById('vecout').textContent = `移動量：dx=${fmt(dx)}, dy=${fmt(dy)}`;
+  draw(ax,ay,bx,by,ax2,ay2,bx2,by2);
+}
+function copyResult(){
+  const ax=num('ax'), ay=num('ay'), bx=num('bx'), by=num('by');
+  const [dx,dy]=getDelta();
+  const text = `A' X=${fmt(ax+dx)} Y=${fmt(ay+dy)}\nB' X=${fmt(bx+dx)} Y=${fmt(by+dy)}\ndx=${fmt(dx)} dy=${fmt(dy)}`;
+  navigator.clipboard?.writeText(text).then(()=>toast('コピーしたよ')).catch(()=>toast('コピーできないかも'));
+}
+function swapAB(){
+  const ax=document.getElementById('ax').value, ay=document.getElementById('ay').value;
+  document.getElementById('ax').value=document.getElementById('bx').value;
+  document.getElementById('ay').value=document.getElementById('by').value;
+  document.getElementById('bx').value=ax;
+  document.getElementById('by').value=ay;
+  calc();
+}
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),1300);
+}
+function draw(ax,ay,bx,by,ax2,ay2,bx2,by2){
+  const c=document.getElementById('plot'), ctx=c.getContext('2d');
+  ctx.clearRect(0,0,c.width,c.height);
+  const pts=[[ax,ay],[bx,by],[ax2,ay2],[bx2,by2]];
+  let minx=Math.min(...pts.map(p=>p[0])), maxx=Math.max(...pts.map(p=>p[0]));
+  let miny=Math.min(...pts.map(p=>p[1])), maxy=Math.max(...pts.map(p=>p[1]));
+  const padVal=Math.max(100,(maxx-minx+maxy-miny)*0.08);
+  minx-=padVal; maxx+=padVal; miny-=padVal; maxy+=padVal;
+  const sx=(c.width-80)/(maxx-minx || 1), sy=(c.height-80)/(maxy-miny || 1);
+  const s=Math.min(sx,sy);
+  const tx=40+(c.width-80-(maxx-minx)*s)/2;
+  const ty=40+(c.height-80-(maxy-miny)*s)/2;
+  const map=(x,y)=>[tx+(x-minx)*s, c.height-(ty+(y-miny)*s)];
+
+  ctx.strokeStyle='#263246'; ctx.lineWidth=1;
+  for(let i=0;i<8;i++){
+    const x=40+i*(c.width-80)/7;
+    ctx.beginPath(); ctx.moveTo(x,30); ctx.lineTo(x,c.height-30); ctx.stroke();
+    const y=30+i*(c.height-60)/7;
+    ctx.beginPath(); ctx.moveTo(30,y); ctx.lineTo(c.width-30,y); ctx.stroke();
+  }
+
+  function line(p1,p2,color,w=4){
+    ctx.strokeStyle=color; ctx.lineWidth=w; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(...map(p1[0],p1[1])); ctx.lineTo(...map(p2[0],p2[1])); ctx.stroke();
+  }
+  function dot(x,y,label,color){
+    const [px,py]=map(x,y);
+    ctx.fillStyle=color; ctx.beginPath(); ctx.arc(px,py,7,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#e5e7eb'; ctx.font='18px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText(label,px+10,py-10);
+  }
+
+  line([ax,ay],[bx,by],'#60a5fa',5);
+  line([ax2,ay2],[bx2,by2],'#22c55e',5);
+  line([ax,ay],[ax2,ay2],'#f59e0b',2);
+  line([bx,by],[bx2,by2],'#f59e0b',2);
+  dot(ax,ay,'A','#60a5fa'); dot(bx,by,'B','#60a5fa');
+  dot(ax2,ay2,"A'",'#22c55e'); dot(bx2,by2,"B'",'#22c55e');
+}
+document.querySelectorAll('input,select').forEach(el=>el.addEventListener('input',calc));
+calc();
+</script>
+</body>
+</html>
