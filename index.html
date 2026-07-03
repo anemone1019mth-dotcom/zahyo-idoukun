@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="座標移動君">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#07111f">
+  <title>座標移動君 v2</title>
+  <style>
+    :root{
+      --bg:#07111f;--card:#101a2b;--card2:#0c1626;--text:#edf3ff;--muted:#9aa8bd;
+      --line:#26354d;--blue:#5da9ff;--green:#32d17c;--orange:#ffb020;--red:#ff5c7a;
+      --input:#07101d;--purple:#b084ff;--cyan:#31d6ff;
+    }
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html,body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue","Yu Gothic",YuGothic,Meiryo,sans-serif}
+    body{padding:14px 14px calc(32px + env(safe-area-inset-bottom))}
+    .app{max-width:850px;margin:0 auto}
+    header{padding:8px 2px 10px}
+    h1{font-size:28px;margin:0 0 6px;font-weight:900;letter-spacing:.03em}
+    .sub{font-size:13px;line-height:1.55;color:var(--muted)}
+    .pill{display:inline-block;margin:8px 6px 0 0;font-size:12px;color:#d4eaff;background:rgba(93,169,255,.13);border:1px solid rgba(93,169,255,.35);border-radius:999px;padding:5px 9px}
+    .card{background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--line);border-radius:18px;padding:14px;margin:12px 0;box-shadow:0 12px 28px rgba(0,0,0,.24)}
+    h2{font-size:16px;margin:0 0 12px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+    label{display:block;color:var(--muted);font-size:12px;margin:0 0 5px}
+    input,select{width:100%;border:1px solid #33435f;background:var(--input);border-radius:13px;color:var(--text);padding:12px 11px;font-size:18px;outline:none}
+    input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(93,169,255,.17)}
+    button{border:1px solid var(--line);background:#0b1423;color:var(--text);border-radius:13px;padding:12px 8px;font-size:15px;min-height:46px;font-weight:800}
+    button:active{transform:translateY(1px)}
+    button.active{border-color:var(--blue);background:rgba(93,169,255,.18)}
+    .primary{background:linear-gradient(180deg,#2277e8,#1553b8);border-color:#4f9cff}
+    .green{background:linear-gradient(180deg,#16a65b,#107b45);border-color:#32d17c}
+    .orange{background:linear-gradient(180deg,#c97808,#9a5904);border-color:#ffb020}
+    .red{background:linear-gradient(180deg,#c53052,#9f1239);border-color:#ff5c7a}
+    .purple{background:linear-gradient(180deg,#7c3aed,#5b21b6);border-color:#b084ff}
+    .cyan{background:linear-gradient(180deg,#0891b2,#0e7490);border-color:#31d6ff}
+    .seg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
+    .quick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+    .dirgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+    .resultGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .box{background:#060d18;border:1px solid var(--line);border-radius:15px;padding:12px}
+    .name{font-size:12px;color:var(--muted);margin-bottom:5px}
+    .val{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:18px;line-height:1.38;white-space:pre-wrap;word-break:break-word}
+    .big{font-size:20px;font-weight:900}
+    .mini{font-size:12px;color:var(--muted);line-height:1.55;margin-top:10px}
+    .warn{color:#ffd08a}
+    .actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+    .actions3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px}
+    canvas{width:100%;height:280px;background:#050c16;border:1px solid var(--line);border-radius:15px}
+    .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#eef4ff;color:#08111f;padding:10px 14px;border-radius:999px;font-size:14px;font-weight:900;opacity:0;pointer-events:none;transition:.22s;z-index:10}
+    .toast.show{opacity:1;bottom:34px}
+    .hidden{display:none}
+    .historyItem{background:#07101d;border:1px solid var(--line);border-radius:13px;padding:10px;margin-top:8px}
+    .historyItem .t{font-size:12px;color:#cfe6ff;margin-bottom:5px}
+    .historyItem .b{font-size:12px;color:var(--muted);line-height:1.45;white-space:pre-wrap}
+    .steps{background:#07101d;border:1px solid var(--line);border-radius:13px;padding:10px;min-height:44px;font-size:13px;color:#dbeafe;line-height:1.5;white-space:pre-wrap;margin-top:10px}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>座標移動君 v2</h1>
+    <div class="sub">X＝南北、Y＝東西。北0°・東90°の現場用。500・1000・1500をワンタップ。</div>
+    <span class="pill">X+ 北 / X- 南</span>
+    <span class="pill">Y+ 東 / Y- 西</span>
+    <span class="pill">偏角：北0° 東90°</span>
+  </header>
+
+  <section class="card">
+    <h2>① 2点座標</h2>
+    <div class="grid">
+      <div><label>A点 X 南北</label><input id="ax" inputmode="decimal" placeholder="例 3207"></div>
+      <div><label>A点 Y 東西</label><input id="ay" inputmode="decimal" placeholder="例 2268"></div>
+      <div><label>B点 X 南北</label><input id="bx" inputmode="decimal" placeholder="例 4500"></div>
+      <div><label>B点 Y 東西</label><input id="by" inputmode="decimal" placeholder="例 3100"></div>
+    </div>
+    <div class="actions">
+      <button onclick="swapAB()">A/B入替</button>
+      <button class="red" onclick="clearInputs()">入力クリア</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>② A→B 距離・偏角</h2>
+    <div class="resultGrid">
+      <div class="box"><div class="name">距離</div><div class="val big" id="dist">-</div></div>
+      <div class="box"><div class="name">偏角</div><div class="val big" id="bearing">-</div></div>
+    </div>
+    <div class="resultGrid" style="margin-top:10px">
+      <div class="box"><div class="name">度分秒</div><div class="val" id="bearingDms">-</div></div>
+      <div class="box"><div class="name">差分</div><div class="val" id="diff">-</div></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>③ 移動</h2>
+    <div class="seg">
+      <button id="modeCardinal" class="active" onclick="setMode('cardinal')">北南東西</button>
+      <button id="modeOffset" onclick="setMode('offset')">右/左逃げ</button>
+      <button id="modeChain" onclick="setMode('chain')">連続</button>
+    </div>
+
+    <div id="cardinalBox">
+      <div class="grid">
+        <div><label>方向</label><select id="dir"><option value="north">北へ / X+</option><option value="south">南へ / X-</option><option value="east">東へ / Y+</option><option value="west">西へ / Y-</option></select></div>
+        <div><label>距離</label><input id="move" inputmode="decimal" value="500"></div>
+      </div>
+      <div class="dirgrid">
+        <button onclick="setDir('north')">北</button><button onclick="setDir('south')">南</button><button onclick="setDir('east')">東</button><button onclick="setDir('west')">西</button>
+      </div>
+      <div class="quick">
+        <button class="cyan" onclick="setMove(500)">500</button><button class="cyan" onclick="setMove(1000)">1000</button><button class="cyan" onclick="setMove(1500)">1500</button>
+      </div>
+    </div>
+
+    <div id="offsetBox" class="hidden">
+      <div class="grid">
+        <div><label>A→Bに対して</label><select id="side"><option value="right">右へ</option><option value="left">左へ</option></select></div>
+        <div><label>逃げ距離</label><input id="offset" inputmode="decimal" value="500"></div>
+      </div>
+      <div class="actions">
+        <button onclick="setOffsetSide('right')">右</button><button onclick="setOffsetSide('left')">左</button>
+      </div>
+      <div class="quick">
+        <button class="cyan" onclick="setOffset(500)">500</button><button class="cyan" onclick="setOffset(1000)">1000</button><button class="cyan" onclick="setOffset(1500)">1500</button>
+      </div>
+      <div class="mini warn">A→B方向に立って見た時の右/左。</div>
+    </div>
+
+    <div id="chainBox" class="hidden">
+      <div class="grid">
+        <div><label>追加方向</label><select id="chainDir"><option value="north">北へ / X+</option><option value="south">南へ / X-</option><option value="east">東へ / Y+</option><option value="west">西へ / Y-</option></select></div>
+        <div><label>追加距離</label><input id="chainDist" inputmode="decimal" value="500"></div>
+      </div>
+      <div class="dirgrid">
+        <button onclick="addStep('north')">北</button><button onclick="addStep('south')">南</button><button onclick="addStep('east')">東</button><button onclick="addStep('west')">西</button>
+      </div>
+      <div class="quick">
+        <button class="cyan" onclick="setChainDist(500)">500</button><button class="cyan" onclick="setChainDist(1000)">1000</button><button class="cyan" onclick="setChainDist(1500)">1500</button>
+      </div>
+      <div class="actions">
+        <button class="purple" onclick="addCurrentStep()">追加</button><button class="red" onclick="clearSteps()">リセット</button>
+      </div>
+      <div class="steps" id="stepsText">未追加</div>
+    </div>
+
+    <div class="mini" id="moveout">-</div>
+  </section>
+
+  <section class="card">
+    <h2>④ 結果</h2>
+    <div class="resultGrid">
+      <div class="box"><div class="name">A'</div><div class="val" id="aout">-</div></div>
+      <div class="box"><div class="name">B'</div><div class="val" id="bout">-</div></div>
+    </div>
+    <div class="resultGrid" style="margin-top:10px">
+      <div class="box"><div class="name">移動POL</div><div class="val" id="movePol">-</div></div>
+      <div class="box"><div class="name">A'→B' POL</div><div class="val" id="abpPol">-</div></div>
+    </div>
+    <div class="actions3">
+      <button class="primary" onclick="copyA()">A'コピー</button>
+      <button class="primary" onclick="copyB()">B'コピー</button>
+      <button class="green" onclick="copyNikon()">ニコン風</button>
+    </div>
+    <div class="actions">
+      <button onclick="copyResult()">全部コピー</button>
+      <button class="orange" onclick="saveHistory()">履歴保存</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>図</h2>
+    <canvas id="plot" width="850" height="560"></canvas>
+    <button style="width:100%;margin-top:10px" onclick="sample()">サンプル復帰</button>
+  </section>
+
+  <section class="card">
+    <h2>履歴 10件</h2>
+    <div class="actions"><button onclick="renderHistory()">更新</button><button class="red" onclick="clearHistory()">履歴削除</button></div>
+    <div id="history"></div>
+  </section>
+</div>
+<div class="toast" id="toast">コピーしたよ</div>
+
+<script>
+let mode='cardinal'; let steps=[];
+const $=id=>document.getElementById(id);
+function n(id){const v=parseFloat(String($(id).value??'').replace(',','.'));return Number.isFinite(v)?v:0}
+function f(x){if(!Number.isFinite(x))return'-';const s=(Math.round(x*1000)/1000).toFixed(3);return s.replace(/\.?0+$/,'')}
+function dms(deg){if(!Number.isFinite(deg))return'-';deg=((deg%360)+360)%360;let d=Math.floor(deg),mf=(deg-d)*60,m=Math.floor(mf),s=Math.round((mf-m)*60);if(s===60){s=0;m++}if(m===60){m=0;d++}if(d===360)d=0;return `${d}°${String(m).padStart(2,'0')}'${String(s).padStart(2,'0')}"`}
+function bearing(dxN,dyE){if(Math.abs(dxN)<1e-12&&Math.abs(dyE)<1e-12)return 0;let b=Math.atan2(dyE,dxN)*180/Math.PI;return b<0?b+360:b}
+function dirDelta(dir,d){if(dir==='north')return[d,0,'北'];if(dir==='south')return[-d,0,'南'];if(dir==='east')return[0,d,'東'];return[0,-d,'西']}
+function setMode(m){mode=m;$('modeCardinal').classList.toggle('active',m==='cardinal');$('modeOffset').classList.toggle('active',m==='offset');$('modeChain').classList.toggle('active',m==='chain');$('cardinalBox').classList.toggle('hidden',m!=='cardinal');$('offsetBox').classList.toggle('hidden',m!=='offset');$('chainBox').classList.toggle('hidden',m!=='chain');calc()}
+function moveDelta(){
+ const ax=n('ax'),ay=n('ay'),bx=n('bx'),by=n('by');
+ if(mode==='cardinal'){const d=n('move'),[mx,my,di]=dirDelta($('dir').value,d);return[mx,my,`${di}へ ${f(d)}`]}
+ if(mode==='chain'){let mx=0,my=0;steps.forEach(s=>{mx+=s.dx;my+=s.dy});return[mx,my,steps.length?`連続移動 ${steps.length}件`:'連続移動 未追加']}
+ const vx=bx-ax,vy=by-ay,len=Math.hypot(vx,vy);if(len===0)return[0,0,'A→B距離が0のため右/左不可'];
+ const d=n('offset'),side=$('side').value;
+ if(side==='right')return[-vy/len*d, vx/len*d,`A→Bに対して右へ ${f(d)}`];
+ return[vy/len*d, -vx/len*d,`A→Bに対して左へ ${f(d)}`];
+}
+function current(){
+ const ax=n('ax'),ay=n('ay'),bx=n('bx'),by=n('by'),dx=bx-ax,dy=by-ay,dist=Math.hypot(dx,dy),bear=bearing(dx,dy);
+ const [mx,my,label]=moveDelta(),ax2=ax+mx,ay2=ay+my,bx2=bx+mx,by2=by+my,md=Math.hypot(mx,my),mb=bearing(mx,my);
+ return{ax,ay,bx,by,dx,dy,dist,bear,mx,my,label,ax2,ay2,bx2,by2,md,mb};
+}
+function calc(){
+ const c=current(),abpd=Math.hypot(c.bx2-c.ax2,c.by2-c.ay2),abpb=bearing(c.bx2-c.ax2,c.by2-c.ay2);
+ $('dist').textContent=f(c.dist);$('bearing').textContent=f(c.bear)+'°';$('bearingDms').textContent=dms(c.bear);$('diff').textContent=`ΔX ${f(c.dx)}\nΔY ${f(c.dy)}`;
+ $('moveout').textContent=`${c.label}：X変化=${f(c.mx)}, Y変化=${f(c.my)}`;
+ $('aout').textContent=`X=${f(c.ax2)}\nY=${f(c.ay2)}`;$('bout').textContent=`X=${f(c.bx2)}\nY=${f(c.by2)}`;
+ $('movePol').textContent=`距離 ${f(c.md)}\n角度 ${f(c.mb)}°\n${dms(c.mb)}`;
+ $('abpPol').textContent=`距離 ${f(abpd)}\n角度 ${f(abpb)}°\n${dms(abpb)}`;
+ renderSteps();saveState();draw(c.ax,c.ay,c.bx,c.by,c.ax2,c.ay2,c.bx2,c.by2);
+}
+function setDir(v){$('dir').value=v;setMode('cardinal')} function setMove(v){$('move').value=v;setMode('cardinal')}
+function setOffsetSide(v){$('side').value=v;setMode('offset')} function setOffset(v){$('offset').value=v;setMode('offset')}
+function setChainDist(v){$('chainDist').value=v;setMode('chain')}
+function addStep(dir){const d=n('chainDist'),[dx,dy,label]=dirDelta(dir,d);steps.push({dir:label,d,dx,dy});setMode('chain')}
+function addCurrentStep(){addStep($('chainDir').value)} function clearSteps(){steps=[];setMode('chain')}
+function renderSteps(){if(!steps.length){$('stepsText').textContent='未追加';return}let tx=0,ty=0;const lines=steps.map((s,i)=>{tx+=s.dx;ty+=s.dy;return `${i+1}. ${s.dir}${f(s.d)}  X${s.dx>=0?'+':''}${f(s.dx)} / Y${s.dy>=0?'+':''}${f(s.dy)}`});lines.push(`合計：X変化=${f(tx)}, Y変化=${f(ty)}`);$('stepsText').textContent=lines.join('\n')}
+function swapAB(){const ax=$('ax').value,ay=$('ay').value;$('ax').value=$('bx').value;$('ay').value=$('by').value;$('bx').value=ax;$('by').value=ay;calc()}
+function clearInputs(){['ax','ay','bx','by'].forEach(id=>$(id).value='');calc()}
+function sample(){$('ax').value='3207';$('ay').value='2268';$('bx').value='4500';$('by').value='3100';$('move').value='500';$('offset').value='500';$('chainDist').value='500';$('dir').value='north';$('side').value='right';steps=[];setMode('cardinal')}
+function textAll(){const c=current();return `座標移動君\n\nA X=${f(c.ax)} Y=${f(c.ay)}\nB X=${f(c.bx)} Y=${f(c.by)}\n\nA→B\n距離=${f(c.dist)}\n偏角=${f(c.bear)}° / ${dms(c.bear)}\nΔX=${f(c.dx)} ΔY=${f(c.dy)}\n\n${c.label}\nX変化=${f(c.mx)} Y変化=${f(c.my)}\n\nA' X=${f(c.ax2)} Y=${f(c.ay2)}\nB' X=${f(c.bx2)} Y=${f(c.by2)}`}
+function copyText(t){navigator.clipboard?navigator.clipboard.writeText(t).then(()=>toast('コピーしたよ')).catch(()=>toast('コピー失敗')):toast('コピー非対応')}
+function copyA(){const c=current();copyText(`A'\nX=${f(c.ax2)}\nY=${f(c.ay2)}`)}
+function copyB(){const c=current();copyText(`B'\nX=${f(c.bx2)}\nY=${f(c.by2)}`)}
+function copyNikon(){const c=current();copyText(`A'\nX=${f(c.ax2)}\nY=${f(c.ay2)}\n\nB'\nX=${f(c.bx2)}\nY=${f(c.by2)}\n\n移動POL\n距離=${f(c.md)}\n角度=${dms(c.mb)}`)}
+function copyResult(){copyText(textAll())}
+function saveHistory(){let arr=JSON.parse(localStorage.getItem('zahyoHistory')||'[]');arr.unshift({time:new Date().toLocaleString('ja-JP'),text:textAll()});localStorage.setItem('zahyoHistory',JSON.stringify(arr.slice(0,10)));renderHistory();toast('履歴保存')}
+function renderHistory(){const arr=JSON.parse(localStorage.getItem('zahyoHistory')||'[]'),box=$('history');if(!arr.length){box.innerHTML='<div class="mini">履歴なし</div>';return}box.innerHTML=arr.map((h,i)=>`<div class="historyItem"><div class="t">${i+1}. ${esc(h.time)}</div><div class="b">${esc(h.text)}</div><button style="width:100%;margin-top:8px" onclick="copyHistory(${i})">この履歴をコピー</button></div>`).join('')}
+function copyHistory(i){const arr=JSON.parse(localStorage.getItem('zahyoHistory')||'[]');if(arr[i])copyText(arr[i].text)}
+function clearHistory(){localStorage.removeItem('zahyoHistory');renderHistory();toast('履歴削除')}
+function saveState(){const s={};['ax','ay','bx','by','move','dir','offset','side','chainDist','chainDir'].forEach(id=>s[id]=$(id).value);s.mode=mode;s.steps=steps;localStorage.setItem('zahyoState',JSON.stringify(s))}
+function loadState(){const raw=localStorage.getItem('zahyoState');if(!raw){sample();return}try{const s=JSON.parse(raw);['ax','ay','bx','by','move','dir','offset','side','chainDist','chainDir'].forEach(id=>{if(s[id]!==undefined)$(id).value=s[id]});steps=Array.isArray(s.steps)?s.steps:[];setMode(s.mode||'cardinal')}catch(e){sample()}}
+function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1300)}
+function esc(str){return String(str).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function draw(ax,ay,bx,by,ax2,ay2,bx2,by2){
+ const c=$('plot'),ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);
+ const pts=[[ay,ax],[by,bx],[ay2,ax2],[by2,bx2]];let minE=Math.min(...pts.map(p=>p[0])),maxE=Math.max(...pts.map(p=>p[0])),minN=Math.min(...pts.map(p=>p[1])),maxN=Math.max(...pts.map(p=>p[1]));
+ const pad=Math.max(100,(Math.abs(maxE-minE)+Math.abs(maxN-minN))*0.08);minE-=pad;maxE+=pad;minN-=pad;maxN+=pad;
+ const sx=(c.width-82)/((maxE-minE)||1),sy=(c.height-94)/((maxN-minN)||1),s=Math.min(sx,sy),ox=41+(c.width-82-(maxE-minE)*s)/2,oy=47+(c.height-94-(maxN-minN)*s)/2;
+ const map=(e,n)=>[ox+(e-minE)*s,c.height-(oy+(n-minN)*s)];
+ ctx.strokeStyle='#24344c';ctx.lineWidth=1;for(let i=0;i<7;i++){let x=35+i*(c.width-70)/6;ctx.beginPath();ctx.moveTo(x,30);ctx.lineTo(x,c.height-35);ctx.stroke();let y=35+i*(c.height-70)/6;ctx.beginPath();ctx.moveTo(30,y);ctx.lineTo(c.width-30,y);ctx.stroke()}
+ ctx.fillStyle='#9aa8bd';ctx.font='14px -apple-system,BlinkMacSystemFont,sans-serif';ctx.fillText('北 X+',18,22);ctx.fillText('東 Y+',c.width-70,c.height-14);
+ function line(e1,n1,e2,n2,color,w){ctx.strokeStyle=color;ctx.lineWidth=w;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(...map(e1,n1));ctx.lineTo(...map(e2,n2));ctx.stroke()}
+ function dot(e,n,label,color){const [x,y]=map(e,n);ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,7,0,Math.PI*2);ctx.fill();ctx.fillStyle='#edf3ff';ctx.font='18px -apple-system,BlinkMacSystemFont,sans-serif';ctx.fillText(label,x+10,y-10)}
+ line(ay,ax,by,bx,'#5da9ff',5);line(ay2,ax2,by2,bx2,'#32d17c',5);line(ay,ax,ay2,ax2,'#ffb020',2);line(by,bx,by2,bx2,'#ffb020',2);dot(ay,ax,'A','#5da9ff');dot(by,bx,'B','#5da9ff');dot(ay2,ax2,"A'",'#32d17c');dot(by2,bx2,"B'",'#32d17c')
+}
+['ax','ay','bx','by','move','dir','offset','side','chainDist','chainDir'].forEach(id=>$(id).addEventListener('input',calc));
+loadState();renderHistory();
+</script>
+</body>
+</html>
